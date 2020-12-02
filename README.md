@@ -1,5 +1,5 @@
 ## Overview
-This repository provides a PyTorch implementation of [Lip2Wav](https://openaccess.thecvf.com/content_CVPR_2020/papers/Prajwal_Learning_Individual_Speaking_Styles_for_Accurate_Lip_to_Speech_Synthesis_CVPR_2020_paper.pdf). This project is highly based on 
+This repository provides a PyTorch implementation of [Lip2Wav](https://openaccess.thecvf.com/content_CVPR_2020/papers/Prajwal_Learning_Individual_Speaking_Styles_for_Accurate_Lip_to_Speech_Synthesis_CVPR_2020_paper.pdf).  
 
 ## Notice
 I have tried to match official implementation as much as possible, but it may have some mistakes, so please be careful of using this implementation. Also, feel free to tell me any suggestion for this repository. *Sample results will be released soon.* Thank you!
@@ -45,4 +45,4 @@ Pretrained model of Chemistry Lectures is only available now. You can download t
 
 
 ## Acknowledgements
-This repository is modified from the original [Lip2Wav](https://github.com/Rudrabha/Lip2Wav) and [Tacotron2-Pytorch](https://github.com/BogiHsu/Tacotron2-PyTorch). I am so thankful for these great codes. 
+This repository is modified from the original [Lip2Wav](https://github.com/Rudrabha/Lip2Wav) and highly based on [Tacotron2-Pytorch](https://github.com/BogiHsu/Tacotron2-PyTorch). I am so thankful for these great codes. 
