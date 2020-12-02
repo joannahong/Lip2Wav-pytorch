@@ -1,5 +1,5 @@
 ## Overview
-This repository provides a PyTorch implementation of [Lip2Wav](https://openaccess.thecvf.com/content_CVPR_2020/papers/Prajwal_Learning_Individual_Speaking_Styles_for_Accurate_Lip_to_Speech_Synthesis_CVPR_2020_paper.pdf). 
+This repository provides a PyTorch implementation of [Lip2Wav](https://openaccess.thecvf.com/content_CVPR_2020/papers/Prajwal_Learning_Individual_Speaking_Styles_for_Accurate_Lip_to_Speech_Synthesis_CVPR_2020_paper.pdf). This project is highly based on 
 
 ## Notice
 I have tried to match official implementation as much as possible, but it may have some mistakes, so please be careful of using this implementation. Also, feel free to tell me any suggestion for this repository. *Sample results will be released soon.* Thank you!
