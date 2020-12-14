@@ -92,13 +92,13 @@ class Tacotron2Logger(SummaryWriter):
 			# save audio
 			# try: # sometimes error
 			wav = inv_mel_spectrogram(mel_outputs, hps)
-			wav *= 32767 / max(0.01, np.max(np.abs(wav)))
+# 			wav *= 32767 / max(0.01, np.max(np.abs(wav)))
 			# wav /= max(0.01, np.max(np.abs(wav)))
 			wav_postnet = inv_mel_spectrogram(mel_outputs_postnet, hps)
-			wav_postnet *= 32767 / max(0.01, np.max(np.abs(wav_postnet)))
+# 			wav_postnet *= 32767 / max(0.01, np.max(np.abs(wav_postnet)))
 			# wav_postnet /= max(0.01, np.max(np.abs(wav_postnet)))
 			wav_target = inv_mel_spectrogram(mel_target, hps)
-			wav_target *= 32767 / max(0.01, np.max(np.abs(wav_target)))
+# 			wav_target *= 32767 / max(0.01, np.max(np.abs(wav_target)))
 			# wav_target /= max(0.01, np.max(np.abs(wav_target)))
 			self.add_audio('pred_test', wav, iteration, hps.sample_rate)
 			self.add_audio('pred_postnet_test', wav_postnet, iteration, hps.sample_rate)
