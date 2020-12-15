@@ -6,8 +6,6 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 from model.layers import ConvNorm, LinearNorm, ConvNorm3D
 from utils.util import to_var, get_mask_from_lengths
-from model.recurrent import Recurrent
-
 
 class Tacotron2Loss(nn.Module):
 	def __init__(self):
@@ -288,9 +286,6 @@ class Encoder3D(nn.Module):
 		self.lstm = nn.LSTM(hparams.encoder_embedding_dim,
 		                    int(hparams.encoder_embedding_dim / 2), 1,
 		                    batch_first=True, bidirectional=True)
-
-		# self.lstm = Recurrent(mode='LSTM', input_size=hparams.encoder_embedding_dim,
-		# 					  hidden_size=hparams.encoder_embedding_dim, bidirectional=True, zoneout=0.1)
 
 	def forward(self, x, input_lengths):
 		for conv in self.convolutions:
