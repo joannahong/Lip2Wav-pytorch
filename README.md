@@ -20,7 +20,8 @@ I have tried to match official implementation as much as possible, but it may ha
 
 
 ## Datasets
-You can download datasets from the original [Lip2Wav repository](https://openaccess.thecvf.com/content_CVPR_2020/papers/Prajwal_Learning_Individual_Speaking_Styles_for_Accurate_Lip_to_Speech_Synthesis_CVPR_2020_paper.pd), same format of dataset directories is used. **Please preprocess first following steps listed in the original repository.**
+You can download lrw datasets from the original [Lip2Wav repository](https://github.com/Rudrabha/Lip2Wav/tree/multispeaker), same format of dataset directories is used. [Grid dataset](http://spandh.dcs.shef.ac.uk/gridcorpus/) is also trainable.
+**Please preprocess first following steps listed in the original repository.**
 
 
 ## Training
