@@ -26,11 +26,11 @@ You can download datasets from the original [Lip2Wav repository](https://openacc
 ## Training
 * For training Lip2Wav-pyroch, run the following command.
 ```
-python train.py --data_dir=<dir/to/dataset> --log_dir=<dir/to/models>
+python train_multi.py --data_dir=<dir/to/dataset> --log_dir=<dir/to/models>
 ```
 * For training using pretrained model, run the following command.
 ```
-python train.py --data_dir=<dir/to/dataset> --log_dir=<dir/to/models> --ckpt_dir=<pth/to/pretrained/model>
+python train_multi.py --data_dir=<dir/to/dataset> --log_dir=<dir/to/models> --ckpt_dir=<pth/to/pretrained/model>
 ```
   
 ## Inference
@@ -41,13 +41,11 @@ python test.py --data_dir=<dir/to/dataset> --results_dir=<dir/to/save/results> -
 
 
 ## Pretrained Model
-Pretrained model of Chemistry Lectures is only available now. You can download the model [here](https://www.dropbox.com/sh/p6ljz9knhegxudl/AAAe63m0mpOZjUDbXbmkKROla?dl=0).
+will be updated
 
 
 ## Results
-You can find an example test result in results folder. The following figure shows the attention alignment(left), the test result from postnet(right top), and the ground truth Mel spectrogram(right bottom).
-
-![image](results/tmp.png)
+will be updated
 
 
 
