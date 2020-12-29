@@ -1,6 +1,3 @@
-from text import symbols
-
-
 class hparams:
 	################################
 	# Data Parameters              #
@@ -24,8 +21,8 @@ class hparams:
 	################################
 	# Model Parameters             #
 	################################
-	n_symbols = len(symbols)
-	symbols_embedding_dim = 512
+	# n_symbols = len(symbols)
+	# symbols_embedding_dim = 512
 
 	# Encoder parameters
 	encoder_kernel_size = 5
@@ -56,48 +53,49 @@ class hparams:
 	# Train                        #
 	################################
 	is_cuda = True
+	is_multigpu = True
 	pin_mem = True
-	n_workers = 8
-	lr = 2e-3
+	n_workers = 2
+	lr = 1e-3
 	betas = (0.9, 0.999)
 	eps = 1e-6
 	sch = True
 	sch_step = 4000
 	max_iter = 1e6
-	batch_size = 40
+	batch_size = 96
 	iters_per_log = 50
 	iters_per_sample = 500
 	iters_per_ckpt = 1000
-	weight_decay = 1e-6
+	weight_decay = 1e-5
 	grad_clip_thresh = 1.0
-	mask_padding = False #### 바꿨음
+	mask_padding = True #### 바꿨음
 	p = 10 # mel spec loss penalty
 	eg_text = 'Make America great again!'
 
 	############# added
-	iscrop = True
-	encoder_embedding_dim = 384  # encoder_lstm_units
+	encoder_embedding_dim = 512  # encoder_lstm_units
 	encoder_n_convolutions = 5  # enc_conv_num_blocks
+	ref_dim = 256
 
-	num_init_filters= 24
+	num_init_filters= 32
 
 	prenet_layers= [256, 256]
 	decoder_layers= 2
-	decoder_lstm_units= 256
+	decoder_lstm_units= 1024
 
 	tacotron_teacher_forcing_start_decay= 29000
 	tacotron_teacher_forcing_decay_steps= 130000
 
-	T= 90 #90
-	overlap= 15
-	mel_overlap= 40
-	mel_step_size= 240
-	img_size = 96
-	fps= 30
-
+	T = 20
+	overlap = 10
+	mel_overlap = 32
+	mel_step_size = 80
+	img_size = 128
+	fps = 25
 
 	use_lws = False
 	# Mel spectrogram
+	mel_thres = 0.7
 	n_fft = 800  # Extra window size is filled with 0 paddings to match this parameter
 	hop_size = 200  # For 16000Hz, 200 = 12.5 ms (0.0125 * sample_rate)
 	win_size = 800  # For 16000Hz, 800 = 50 ms (If None, win_size = n_fft) (0.05 * sample_rate)
