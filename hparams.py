@@ -70,7 +70,7 @@ class hparams:
 	iters_per_ckpt = 1000
 	weight_decay = 1e-6
 	grad_clip_thresh = 1.0
-	mask_padding = False #### 바꿨음
+	mask_padding = True
 	p = 10 # mel spec loss penalty
 	eg_text = 'Make America great again!'
 
