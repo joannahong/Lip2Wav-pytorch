@@ -1,4 +1,4 @@
-from utils import symbols
+from text import symbols
 
 
 class hparams:
