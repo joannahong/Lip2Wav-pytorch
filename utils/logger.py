@@ -1,9 +1,8 @@
 import numpy as np
-from utils.util import to_arr
+from utils import to_arr
 from hparams import hparams as hps
 from tensorboardX import SummaryWriter
-from utils.audio import inv_melspectrogram
-from utils.audio_v import inv_mel_spectrogram
+from utils.audio import inv_mel_spectrogram
 from utils.plot import plot_alignment_to_numpy, plot_spectrogram_to_numpy
 
 

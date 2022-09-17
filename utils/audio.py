@@ -1,132 +1,236 @@
-import scipy
 import librosa
 import librosa.filters
 import numpy as np
+from scipy import signal
 from scipy.io import wavfile
-from hparams import hparams as hps
 
 
-def load_wav(path):
-	sr, wav = wavfile.read(path)
-	wav = wav.astype(np.float32)
-	wav = wav/np.max(np.abs(wav))
-	try:
-		assert sr == hps.sample_rate
-	except:
-		print('Error:', path, 'has wrong sample rate.')
-	return wav
+def load_wav(path, sr):
+    return librosa.core.load(path, sr=sr)[0]
 
 
-def save_wav(wav, path):
-	wav *= 32767 / max(0.01, np.max(np.abs(wav)))
-	wavfile.write(path, hps.sample_rate, wav.astype(np.int16))
+def save_wav(wav, path, sr):
+    wav *= 32767 / max(0.01, np.max(np.abs(wav)))
+    # proposed by @dsmiller
+    wavfile.write(path, sr, wav.astype(np.int16))
 
 
-def preemphasis(x):
-	return scipy.signal.lfilter([1, -hps.preemphasis], [1], x)
+def save_wavenet_wav(wav, path, sr):
+    librosa.output.write_wav(path, wav, sr=sr)
 
 
-def inv_preemphasis(x):
-	return scipy.signal.lfilter([1], [1, -hps.preemphasis], x)
+def preemphasis(wav, k, preemphasize=True):
+    if preemphasize:
+        return signal.lfilter([1, -k], [1], wav)
+    return wav
 
 
-def spectrogram(y):
-	D = _stft(preemphasis(y))
-	S = _amp_to_db(np.abs(D)) - hps.ref_level_db
-	return _normalize(S)
+def inv_preemphasis(wav, k, inv_preemphasize=True):
+    if inv_preemphasize:
+        return signal.lfilter([1], [1, -k], wav)
+    return wav
 
 
-def inv_spectrogram(spectrogram):
-	'''Converts spectrogram to waveform using librosa'''
-	S = _db_to_amp(_denormalize(spectrogram) + hps.ref_level_db)	# Convert back to linear
-	return inv_preemphasis(_griffin_lim(S ** hps.power))			# Reconstruct phase
+# From https://github.com/r9y9/wavenet_vocoder/blob/master/audio.py
+def start_and_end_indices(quantized, silence_threshold=2):
+    for start in range(quantized.size):
+        if abs(quantized[start] - 127) > silence_threshold:
+            break
+    for end in range(quantized.size - 1, 1, -1):
+        if abs(quantized[end] - 127) > silence_threshold:
+            break
 
-def melspectrogram(y):
-	D = _stft(preemphasis(y))
-	S = _amp_to_db(_linear_to_mel(np.abs(D))) - hps.ref_level_db
-	return _normalize(S)
+    assert abs(quantized[start] - 127) > silence_threshold
+    assert abs(quantized[end] - 127) > silence_threshold
 
-
-def inv_melspectrogram(spectrogram):
-	mel = _db_to_amp(_denormalize(spectrogram) + hps.ref_level_db)
-	S = _mel_to_linear(mel)
-	return inv_preemphasis(_griffin_lim(S ** hps.power))
+    return start, end
 
 
-def find_endpoint(wav, threshold_db=-40, min_silence_sec=0.8):
-	window_length = int(hps.sample_rate * min_silence_sec)
-	hop_length = int(window_length / 4)
-	threshold = _db_to_amp(threshold_db)
-	for x in range(hop_length, len(wav) - window_length, hop_length):
-		if np.max(wav[x:x+window_length]) < threshold:
-			return x + hop_length
-	return len(wav)
+def get_hop_size(hparams):
+    hop_size = hparams.hop_size
+    if hop_size is None:
+        assert hparams.frame_shift_ms is not None
+        hop_size = int(hparams.frame_shift_ms / 1000 * hparams.sample_rate)
+    return hop_size
 
 
-def _griffin_lim(S):
-	'''librosa implementation of Griffin-Lim
-	Based on https://github.com/librosa/librosa/issues/434
-	'''
-	angles = np.exp(2j * np.pi * np.random.rand(*S.shape))
-	S_complex = np.abs(S).astype(np.complex)
-	y = _istft(S_complex * angles)
-	for i in range(hps.gl_iters):
-		angles = np.exp(1j * np.angle(_stft(y)))
-		y = _istft(S_complex * angles)
-	return y
+def linearspectrogram(wav, hparams):
+    D = _stft(preemphasis(wav, hparams.preemphasis, hparams.preemphasize), hparams)
+    S = _amp_to_db(np.abs(D), hparams) - hparams.ref_level_db
+
+    if hparams.signal_normalization:
+        return _normalize(S, hparams)
+    return S
 
 
-def _stft(y):
-	n_fft, hop_length, win_length = _stft_parameters()
-	return librosa.stft(y=y, n_fft=n_fft, hop_length=hop_length, win_length=win_length)
+def melspectrogram(wav, hparams):
+    D = _stft(preemphasis(wav, hparams.preemphasis, hparams.preemphasize), hparams)
+    S = _amp_to_db(_linear_to_mel(np.abs(D), hparams), hparams) - hparams.ref_level_db
+
+    if hparams.signal_normalization:
+        return _normalize(S, hparams)
+    return S
 
 
-def _istft(y):
-	_, hop_length, win_length = _stft_parameters()
-	return librosa.istft(y, hop_length=hop_length, win_length=win_length)
+def inv_linear_spectrogram(linear_spectrogram, hparams):
+    """Converts linear spectrogram to waveform using librosa"""
+    if hparams.signal_normalization:
+        D = _denormalize(linear_spectrogram, hparams)
+    else:
+        D = linear_spectrogram
+
+    S = _db_to_amp(D + hparams.ref_level_db)  # Convert back to linear
+
+    if hparams.use_lws:
+        processor = _lws_processor(hparams)
+        D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
+        y = processor.istft(D).astype(np.float32)
+        return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
+    else:
+        return inv_preemphasis(_griffin_lim(S ** hparams.power, hparams), hparams.preemphasis, hparams.preemphasize)
 
 
-def _stft_parameters():
-	n_fft = (hps.num_freq - 1) * 2
-	hop_length = int(hps.frame_shift_ms / 1000 * hps.sample_rate)
-	win_length = int(hps.frame_length_ms / 1000 * hps.sample_rate)
-	return n_fft, hop_length, win_length
+def inv_mel_spectrogram(mel_spectrogram, hparams):
+    """Converts mel spectrogram to waveform using librosa"""
+    if hparams.signal_normalization:
+        D = _denormalize(mel_spectrogram, hparams)
+    else:
+        D = mel_spectrogram
+
+    S = _mel_to_linear(_db_to_amp(D + hparams.ref_level_db), hparams)  # Convert back to linear
+
+    if hparams.use_lws:
+        processor = _lws_processor(hparams)
+        D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
+        y = processor.istft(D).astype(np.float32)
+        return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
+    else:
+        return inv_preemphasis(_griffin_lim(S ** hparams.power, hparams), hparams.preemphasis, hparams.preemphasize)
 
 
-# Conversions:
+def _lws_processor(hparams):
+    import lws
+    return lws.lws(hparams.n_fft, get_hop_size(hparams), fftsize=hparams.win_size, mode="speech")
 
+
+def _griffin_lim(S, hparams):
+    """librosa implementation of Griffin-Lim
+    Based on https://github.com/librosa/librosa/issues/434
+    """
+    angles = np.exp(2j * np.pi * np.random.rand(*S.shape))
+    S_complex = np.abs(S).astype(np.complex)
+    y = _istft(S_complex * angles, hparams)
+    for i in range(hparams.griffin_lim_iters):
+        angles = np.exp(1j * np.angle(_stft(y, hparams)))
+        y = _istft(S_complex * angles, hparams)
+    return y
+
+
+def _stft(y, hparams):
+    if hparams.use_lws:
+        return _lws_processor(hparams).stft(y).T
+    else:
+        return librosa.stft(y=y, n_fft=hparams.n_fft, hop_length=get_hop_size(hparams), win_length=hparams.win_size)
+
+
+def _istft(y, hparams):
+    return librosa.istft(y, hop_length=get_hop_size(hparams), win_length=hparams.win_size)
+
+
+##########################################################
+# Those are only correct when using lws!!! (This was messing with Wavenet quality for a long time!)
+def num_frames(length, fsize, fshift):
+    """Compute number of time frames of spectrogram
+    """
+    pad = (fsize - fshift)
+    if length % fshift == 0:
+        M = (length + pad * 2 - fsize) // fshift + 1
+    else:
+        M = (length + pad * 2 - fsize) // fshift + 2
+    return M
+
+
+def pad_lr(x, fsize, fshift):
+    """Compute left and right padding
+    """
+    M = num_frames(len(x), fsize, fshift)
+    pad = (fsize - fshift)
+    T = len(x) + 2 * pad
+    r = (M - 1) * fshift + fsize - T
+    return pad, pad + r
+
+
+##########################################################
+# Librosa correct padding
+def librosa_pad_lr(x, fsize, fshift):
+    return 0, (x.shape[0] // fshift + 1) * fshift - x.shape[0]
+
+
+# Conversions
 _mel_basis = None
-
-def _linear_to_mel(spectrogram):
-	global _mel_basis
-	if _mel_basis is None:
-		_mel_basis = _build_mel_basis()
-	return np.dot(_mel_basis, spectrogram)
-	
-
-def _mel_to_linear(spectrogram):
-	global _mel_basis
-	if _mel_basis is None:
-		_mel_basis = _build_mel_basis()
-	inv_mel_basis = np.linalg.pinv(_mel_basis)
-	inverse = np.dot(inv_mel_basis, spectrogram)
-	inverse = np.maximum(1e-10, inverse)
-	return inverse
+_inv_mel_basis = None
 
 
-def _build_mel_basis():
-	n_fft = (hps.num_freq - 1) * 2
-	return librosa.filters.mel(hps.sample_rate, n_fft, n_mels=hps.num_mels)
+def _linear_to_mel(spectogram, hparams):
+    global _mel_basis
+    if _mel_basis is None:
+        _mel_basis = _build_mel_basis(hparams)
+    return np.dot(_mel_basis, spectogram)
 
-def _amp_to_db(x):
-	return 20 * np.log10(np.maximum(1e-5, x))
+
+def _mel_to_linear(mel_spectrogram, hparams):
+    global _inv_mel_basis
+    if _inv_mel_basis is None:
+        _inv_mel_basis = np.linalg.pinv(_build_mel_basis(hparams))
+    return np.maximum(1e-10, np.dot(_inv_mel_basis, mel_spectrogram))
+
+
+def _build_mel_basis(hparams):
+    assert hparams.fmax <= hparams.sample_rate // 2
+    return librosa.filters.mel(hparams.sample_rate, hparams.n_fft, n_mels=hparams.num_mels,
+                               fmin=hparams.fmin, fmax=hparams.fmax)
+
+
+def _amp_to_db(x, hparams):
+    min_level = np.exp(hparams.min_level_db / 20 * np.log(10))
+    return 20 * np.log10(np.maximum(min_level, x))
+
 
 def _db_to_amp(x):
-	return np.power(10.0, x * 0.05)
+    return np.power(10.0, (x) * 0.05)
 
-def _normalize(S):
-	return np.clip((S - hps.min_level_db) / -hps.min_level_db, 0, 1)
 
-def _denormalize(S):
-	return (np.clip(S, 0, 1) * -hps.min_level_db) + hps.min_level_db
+def _normalize(S, hparams):
+    if hparams.allow_clipping_in_normalization:
+        if hparams.symmetric_mels:
+            return np.clip((2 * hparams.max_abs_value) * (
+                        (S - hparams.min_level_db) / (-hparams.min_level_db)) - hparams.max_abs_value,
+                           -hparams.max_abs_value, hparams.max_abs_value)
+        else:
+            return np.clip(hparams.max_abs_value * ((S - hparams.min_level_db) / (-hparams.min_level_db)), 0,
+                           hparams.max_abs_value)
 
+    assert S.max() <= 0 and S.min() - hparams.min_level_db >= 0
+    if hparams.symmetric_mels:
+        return (2 * hparams.max_abs_value) * (
+                    (S - hparams.min_level_db) / (-hparams.min_level_db)) - hparams.max_abs_value
+    else:
+        return hparams.max_abs_value * ((S - hparams.min_level_db) / (-hparams.min_level_db))
+
+
+def _denormalize(D, hparams):
+    if hparams.allow_clipping_in_normalization:
+        if hparams.symmetric_mels:
+            return (((np.clip(D, -hparams.max_abs_value,
+                              hparams.max_abs_value) + hparams.max_abs_value) * -hparams.min_level_db / (
+                                 2 * hparams.max_abs_value))
+                    + hparams.min_level_db)
+        else:
+            return ((np.clip(D, 0,
+                             hparams.max_abs_value) * -hparams.min_level_db / hparams.max_abs_value) + hparams.min_level_db)
+
+    if hparams.symmetric_mels:
+        return (((D + hparams.max_abs_value) * -hparams.min_level_db / (
+                    2 * hparams.max_abs_value)) + hparams.min_level_db)
+    else:
+        return ((D * -hparams.min_level_db / hparams.max_abs_value) + hparams.min_level_db)

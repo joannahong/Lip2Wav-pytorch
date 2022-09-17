@@ -11,7 +11,7 @@ import sys, cv2, os, pickle, argparse, subprocess
 
 from model.model import Tacotron2
 from hparams import hparams as hps
-import utils.audio_v as audio
+import utils.audio as audio
 from utils.util import mode, to_var, to_arr
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
