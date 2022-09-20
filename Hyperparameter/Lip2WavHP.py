@@ -6,42 +6,60 @@ class Lip2WavHP(HyperParameter):
 		super(Lip2WavHP, self).__init__()
 		self.main_dir = '/Users/jinchenji/Developer/JetBrains/Pycharm/LipLandmark2Wav'
 		self.datasets_dir = '/Users/jinchenji/Developer/Datasets/Lip2Wav/chem'
-		self.log_dir = os.path.join(self.main_dir, 'Logger/logger_file')
-		self.checkpoint_dir = os.path.join(self.main_dir, 'Checkpoint/ckpt_file')
+
 		self.load_checkpoint = False
 		self.load_ckpt_name = "Trainning_Apr27(16-30-53)"
 		self.load_ckpt_epoch = 260
 		self.load_checkpoint_path = os.path.join(self.checkpoint_dir,
 												 "{}/ckpt_{:05d}.pt".format(self.load_ckpt_name, self.load_ckpt_epoch))
 		self.use_save_lr = False
+		self.n_frames_per_step = 2
 
-		# Audio                        #
+		self.num_init_filters= 24
+
+		# self.tacotron_teacher_forcing_start_decay= 29000
+		# self.tacotron_teacher_forcing_decay_steps= 130000
+
+		self.cropT = 90 #90
+		self.img_size = 96
+		self.fps = 30
+
+		################################
+		# Audio Parameters            #
+		################################
 		self.num_mels = 80
-		self.num_freq = 1025
 		self.sample_rate = 16000
-		self.frame_length_ms = 50
 		self.frame_shift_ms = 12.5
 		self.preemphasis = 0.97
 		self.min_level_db = -100
 		self.ref_level_db = 20
 		self.power = 1.5
-		self.gl_iters = 100
+		self.use_lws = False
+		# Mel spectrogram
+		self.n_fft = 800  # Extra window size is filled with 0 paddings to match this parameter
+		self.hop_size = 200  # For 16000Hz, 200 = 12.5 ms (0.0125 * sample_rate)
+		self.win_size = 800  # For 16000Hz, 800 = 50 ms (If None, win_size = n_fft) (0.05 * sample_rate)
+		self.mel_overlap= 40
+		self.mel_step_size= 240
 
+		################################
 		# Model Parameters             #
-		self.n_symbols = 148 #len(symbols)
-		self.symbols_embedding_dim = 512
+		################################
 
 		# Encoder parameters
 		self.encoder_kernel_size = 5
+		self.encoder_embedding_dim = 384  # encoder_lstm_units
+		self.encoder_n_convolutions = 5  # enc_conv_num_blocks
 
 		# Decoder parameters
-		self.n_frames_per_step = 2
 		self.decoder_rnn_dim = 1024
 		self.prenet_dim = 256
 		self.max_decoder_steps = 120
 		self.gate_threshold = 0.5
 		self.p_attention_dropout = 0.1
 		self.p_decoder_dropout = 0.1
+		self.decoder_layers= 2
+		self.decoder_lstm_units= 256
 
 		# Attention parameters
 		self.attention_rnn_dim = 1024
@@ -51,13 +69,15 @@ class Lip2WavHP(HyperParameter):
 		self.attention_location_n_filters = 32
 		self.attention_location_kernel_size = 31
 
-		# Mel-post processing network parameters
+		# PreNet/PostNet
+		self.prenet_layers= [256, 256]
+
 		self.postnet_embedding_dim = 512
 		self.postnet_kernel_size = 5
 		self.postnet_n_convolutions = 5
 
 		# Train                        #
-		self.is_cuda = True
+		self.use_cuda = True
 		self.pin_mem = True
 		self.n_workers = 8
 		self.lr = 2e-3
@@ -73,35 +93,12 @@ class Lip2WavHP(HyperParameter):
 		self.weight_decay = 1e-6
 		self.grad_clip_thresh = 1.0
 		self.mask_padding = True
-		self.p = 10 # mel spec loss penalty
+		self.loss_penalty = 10 # mel spec loss penalty
 
 		############# added
-		self.iscrop = True
-		self.encoder_embedding_dim = 384  # encoder_lstm_units
-		self.encoder_n_convolutions = 5  # enc_conv_num_blocks
-
-		self.num_init_filters= 24
-
-		self.prenet_layers= [256, 256]
-		self.decoder_layers= 2
-		self.decoder_lstm_units= 256
-
-		self.tacotron_teacher_forcing_start_decay= 29000
-		self.tacotron_teacher_forcing_decay_steps= 130000
-
-		self.T= 90 #90
-		self.overlap= 15
-		self.mel_overlap= 40
-		self.mel_step_size= 240
-		self.img_size = 96
-		self.fps= 30
 
 
-		self.use_lws = False
-		# Mel spectrogram
-		self.n_fft = 800  # Extra window size is filled with 0 paddings to match this parameter
-		self.hop_size = 200  # For 16000Hz, 200 = 12.5 ms (0.0125 * sample_rate)
-		self.win_size = 800  # For 16000Hz, 800 = 50 ms (If None, win_size = n_fft) (0.05 * sample_rate)
+
 
 		# M-AILABS (and other datasets) trim params (these parameters are usually correct for any
 		# data, but definitely must be tuned for specific speakers)

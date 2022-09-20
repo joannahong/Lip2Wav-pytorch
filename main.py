@@ -18,7 +18,7 @@ torch.backends.cudnn.benchmark = False  # faster due to dynamic input shape
 setSeed(0)
 hp = Lip2WavHP()
 
-use_cuda = hp.use_cuda and torch.cuda.is_available()
+use_cuda = hp.cuda_available and torch.cuda.is_available()
 device = 'cuda' if use_cuda else 'cpu'
 
 # get logger ready
@@ -57,22 +57,22 @@ lr_lambda = lambda step: hp.sch_step ** 0.5 * min((step + 1) * hp.sch_step ** -1
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 # load checkpoint
-iter_idx = 1
+epoch_idx = 1
 if hp.load_checkpoint_path != '':
-	model, optimizer, iter_idx, scheduler = load_checkpoint(hp.load_checkpoint_path, model, optimizer, scheduler)
-	iter_idx += 1
+	model, optimizer, epoch_idx, scheduler = load_checkpoint(hp.load_checkpoint_path, model, optimizer, scheduler)
+	epoch_idx += 1
 
 # ====================== step 4/5 开始训练 ====================== #
-while iter_idx <= hp.max_iter:
+while epoch_idx <= hp.max_iter:
 	for batch in train_loader:
-		if iter_idx > hp.max_iter:
+		if epoch_idx > hp.max_iter:
 			break
 		start = time.perf_counter()
 		input, target = model.parse_batch(batch)
 		predict = model(input)
 
 		# loss
-		mel_loss, mel_loss_post, l1_loss, gate_loss = loss_function(predict, target, iter_idx)
+		mel_loss, mel_loss_post, l1_loss, gate_loss = loss_function(predict, target, epoch_idx)
 
 		loss = mel_loss + mel_loss_post + l1_loss + gate_loss
 		items = [mel_loss.item(), mel_loss_post.item(), l1_loss.item(), gate_loss.item()]
@@ -88,30 +88,30 @@ while iter_idx <= hp.max_iter:
 
 		# info
 		dur = time.perf_counter() - start
-		logger.info('Iter: {} Loss: {:.5f} Grad Norm: {:.5f} {:.1f}s/it'.format(iter_idx, sum(items), grad_norm, dur))
+		logger.info('Iter: {} Loss: {:.5f} Grad Norm: {:.5f} {:.1f}s/it'.format(epoch_idx, sum(items), grad_norm, dur))
 
 		# log
-		if hp.log_dir != '' and (iter_idx % hp.iters_per_log == 0):
+		if hp.log_dir != '' and (epoch_idx % hp.iters_per_log == 0):
 			learning_rate = optimizer.param_groups[0]['lr']
-			logger.log_training_vid(predict, target, items, grad_norm, learning_rate, iter_idx)
+			logger.log_training_vid(predict, target, items, grad_norm, learning_rate, epoch_idx)
 
 		# sample
-		if hp.log_dir != '' and (iter_idx % hp.iters_per_sample == 0):
+		if hp.log_dir != '' and (epoch_idx % hp.iters_per_sample == 0):
 			model.eval()
 			for i, batch in enumerate(test_loader):
 				if i == 0:
 					test_input, test_target = model.parse_batch_vid(batch)
 					test_predict = model.inference(test_input, 'train')
-					logger.sample_training(test_predict, test_target, iter_idx)
+					logger.sample_training(test_predict, test_target, epoch_idx)
 				else:
 					break
 			model.train()
 
 		# save ckpt
-		if hp.checkpoint_dir != '' and (iter_idx % hp.iters_per_ckpt == 0):
-			ckpt_pth = os.path.join(hp.checkpoint_dir, 'ckpt_{}.pt'.format(iter_idx))
-			save_checkpoint(model, optimizer, scheduler, iter_idx, ckpt_pth)
-		iter_idx += 1
+		if hp.checkpoint_dir != '' and (epoch_idx % hp.iters_per_ckpt == 0):
+			ckpt_pth = os.path.join(hp.checkpoint_dir, 'ckpt_{}.pt'.format(epoch_idx))
+			save_checkpoint(model, optimizer, scheduler, epoch_idx, ckpt_pth)
+		epoch_idx += 1
 
 # ====================== step 5/5 保存模型 ====================== #
 if hp.log_dir != '':

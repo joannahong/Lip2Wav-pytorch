@@ -54,12 +54,11 @@ class Lip2WavTacotron2(nn.Module):
 
     def forward(self, inputs):
         vid_inputs, vid_lengths, mels, max_len, output_lengths = inputs
-        vid_lengths, output_lengths = vid_lengths.data, output_lengths.data
-
+        # vid_lengths = vid_lengths.data
+        output_lengths = output_lengths.data
         embedded_inputs = vid_inputs.type(torch.FloatTensor)
-        # print('vid_inputs',vid_inputs)
 
-        encoder_outputs = self.encoder(embedded_inputs.cuda(), vid_lengths.cuda())
+        encoder_outputs = self.encoder(embedded_inputs.cuda())
         mel_outputs, gate_outputs, alignments = self.decoder(
             encoder_outputs, mels, memory_lengths=vid_lengths)
 
