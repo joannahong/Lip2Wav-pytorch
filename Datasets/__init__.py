@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 
-class TacotronDataset(Dataset):
+class BaseTacotronDataset(Dataset):
     def __init__(self, hp, splits="train+test+val", excludeZero=True):
         self.hp = hp
         self.data_dir = self.hp.datasets_dir
@@ -119,7 +119,7 @@ class TacotronDataset(Dataset):
         return int(os.path.basename(frame_path).split('.')[0])
 
 
-class TacotronCollate():
+class BaseTacotronCollate():
     def __init__(self, hp):
         self.hp = hp
 

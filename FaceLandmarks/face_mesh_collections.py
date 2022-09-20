@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """MediaPipe FaceMesh connections."""
-class faceMeshCollection():
+class FaceMeshCollection():
     def __init__(self, name, collection: list):
         self.name = name
         self.collection = frozenset(collection)
@@ -23,48 +23,48 @@ class faceMeshCollection():
         for i in self.collection:
             if not i in other.collection:
                 new_collection.append(i)
-        return faceMeshCollection(name="sub", collection=new_collection)
+        return FaceMeshCollection(name="sub", collection=new_collection)
 
     def __add__(self, other):
         new_collection = list(self.collection) + list(other.collection)
         new_collection.sort()
-        return faceMeshCollection(name="add", collection=new_collection)
+        return FaceMeshCollection(name="add", collection=new_collection)
 
 
 # ----------- Lip ------------
-FMesh_Lips_Edge = faceMeshCollection("Lips Edge",[
+FMesh_Lips_Edge = FaceMeshCollection("Lips Edge",[
     0, 13, 14, 17, 37, 39, 40, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95, 146, 178, 181, 185, 191, 267, 269, 270, 291, 308,
     310, 311, 312, 314, 317, 318, 321, 324, 375, 402, 405, 409, 415
 ])
 
-FMesh_Lips_Content = faceMeshCollection("Lips Content", [
+FMesh_Lips_Content = FaceMeshCollection("Lips Content", [
     11, 12, 15, 16, 38, 41, 42, 62, 72, 73, 74, 76, 77, 85, 86, 89, 90, 96, 179, 180, 183, 184, 268, 271, 272, 292,
     302, 303, 304, 306, 307, 315, 316, 319, 320, 325, 403, 404, 407, 408
 ])
 
 FMesh_Lips = (FMesh_Lips_Edge + FMesh_Lips_Content); FMesh_Lips.name = "Full Lips"
 # ----------- EYE ------------
-FMesh_Left_Eye = faceMeshCollection("Left Eye",[
+FMesh_Left_Eye = FaceMeshCollection("Left Eye",[
     249, 263, 362, 373, 374, 380, 381, 382, 384, 385, 386, 387, 388, 390, 398, 466
 ])
 
-FMesh_Left_Eyebrow = faceMeshCollection("Left Eyebrow", [
+FMesh_Left_Eyebrow = FaceMeshCollection("Left Eyebrow", [
     276, 282, 283, 285, 293, 295, 296, 300, 334, 336
 ])
 
-FMesh_Left_Iris = faceMeshCollection("Left Iris", [
+FMesh_Left_Iris = FaceMeshCollection("Left Iris", [
     474, 475, 476, 477])
 
 
-FMesh_Right_Eye = faceMeshCollection("Rigth Eye", [
+FMesh_Right_Eye = FaceMeshCollection("Rigth Eye", [
     7, 33, 133, 144, 145, 153, 154, 155, 157, 158, 159, 160, 161, 163, 173, 246
 ])
 
-FMesh_Right_Eyebrow = faceMeshCollection("Right Eyebrow", [
+FMesh_Right_Eyebrow = FaceMeshCollection("Right Eyebrow", [
     46, 52, 53, 55, 63, 65, 66, 70, 105, 107
 ])
 
-FMesh_Right_Iris = faceMeshCollection("Right Iris", [
+FMesh_Right_Iris = FaceMeshCollection("Right Iris", [
     469, 470, 471, 472
 ])
 
@@ -73,19 +73,19 @@ FMesh_Eyes = (FMesh_Left_Eye + FMesh_Right_Eye); FMesh_Eyes.name = "Eyes"
 FMesh_Eyebrows = (FMesh_Left_Eyebrow + FMesh_Right_Eyebrow); FMesh_Eyebrows.name = "Eyebrows"
 FMesh_Irises = (FMesh_Left_Iris + FMesh_Right_Iris); FMesh_Irises.name = "Irises"
 # ----------- Face ------------
-FMesh_Face_Edge = faceMeshCollection("Face Edge", [
+FMesh_Face_Edge = FaceMeshCollection("Face Edge", [
     10, 21, 54, 58, 67, 93, 103, 109, 127, 132, 136, 148, 149, 150, 152, 162, 172, 176, 234, 251, 284, 288, 297, 323,
     332, 338, 356, 361, 365, 377, 378, 379, 389, 397, 400, 454
 ])                      # 脸部边缘
 
-FMesh_Forehead = faceMeshCollection("Forehead", [
+FMesh_Forehead = FaceMeshCollection("Forehead", [
     8, 9, 68, 69, 71, 104, 108, 151, 298, 299, 301, 333, 337
 ])
 
 
 FMesh_Features_Contours = (FMesh_Eyes + FMesh_Eyebrows + FMesh_Lips_Edge + FMesh_Face_Edge); FMesh_Features_Contours.collection_name = "Contours"   # 五官轮廓（Eyes + Eyebrows + Lip_Edge + Face_Edge）
 
-FMesh_Tesselation = faceMeshCollection("Tesselation", [
+FMesh_Tesselation = FaceMeshCollection("Tesselation", [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
     31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
     60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
@@ -108,7 +108,7 @@ FMesh_Tesselation = faceMeshCollection("Tesselation", [
     459, 460, 461, 462, 463, 464, 465, 466, 467
 ])                  # 0~467
 
-FMesh_Whole_Face = faceMeshCollection("All Face Content", [
+FMesh_Whole_Face = FaceMeshCollection("All Face Content", [
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
     31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
     60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,

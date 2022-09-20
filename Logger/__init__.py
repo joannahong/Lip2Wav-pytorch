@@ -71,7 +71,7 @@ def make_start_info(hp, device, annotate="testHP"):
     strInfo.addLine("Use Model = {}".format(hp.main_model))
     strInfo.addLine("Use Face Mesh Collection = {}".format(hp.fmc.name))
     strInfo.addLine("Batch Size = {}".format(hp.batch_size))
-    strInfo.addLine("Epochs = {}".format(hp.epochs))
+    strInfo.addLine("Epochs = {}".format(hp.max_iter))
     strInfo.addLine("Learning Rate = {}".format(hp.lr))
     strInfo.addLine("Seed = {}".format(hp.seed))
     strInfo.addLine("Decoder Frames Step = {}".format(hp.n_frames_per_step))
@@ -100,14 +100,14 @@ def make_start_info(hp, device, annotate="testHP"):
     return strInfo.string
 
 
-class TacotronLogger(SummaryWriter):
-    def __init__(self, hp:HyperParameter):
+class BaseTacotronLogger(SummaryWriter):
+    def __init__(self, hp: HyperParameter):
 
         self.hp = hp
         self.annotate = hp.timming_annotate
         self.log_dir = hp.log_dir
 
-        super(TacotronLogger, self).__init__(self.log_dir, flush_secs=5)
+        super(BaseTacotronLogger, self).__init__(self.log_dir, flush_secs=5)
         self.mainLog = os.path.join(self.log_dir, "mainLog.txt")
         self.mainLogger = get_logger(self.mainLog)
 
@@ -132,9 +132,6 @@ class TacotronLogger(SummaryWriter):
         self.mainLogger.info("End Time : {}".format(current_time))
 
         self.close()
-
-
-
 
     def log_study_info(self, grad_norm, learning_rate, epoch_idx):
         self.info("grad_norm = {:.3f}".format(grad_norm))

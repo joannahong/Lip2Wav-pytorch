@@ -16,9 +16,9 @@ class Lip2WavLoss(nn.Module):
 
         mel_out, mel_out_postnet, gate_out, _ = model_output
         gate_out = gate_out.view(-1, 1)
-        p = self.hp.p
-        mel_loss = nn.MSELoss()(p * mel_out, p * mel_target)
-        mel_loss_post = nn.MSELoss()(p * mel_out_postnet, p * mel_target)
+        penalty = self.hp.loss_penalty
+        mel_loss = nn.MSELoss()(penalty * mel_out, penalty * mel_target)
+        mel_loss_post = nn.MSELoss()(penalty * mel_out_postnet, penalty * mel_target)
         gate_loss = nn.BCEWithLogitsLoss()(gate_out, gate_target)
 
         # added

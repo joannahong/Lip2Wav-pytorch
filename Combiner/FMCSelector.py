@@ -1,7 +1,7 @@
 import FaceLandmarks.face_mesh_collections as fmc
 
 
-fmc = {
+FMCSelector = {
     "LipsEdge": fmc.FMesh_Lips_Edge,
     "LipsContent": fmc.FMesh_Lips_Content,
     "Lips": fmc.FMesh_Lips,
@@ -22,5 +22,5 @@ fmc = {
     "Forehead": fmc.FMesh_Forehead,
     "Contours": fmc.FMesh_Features_Contours,
     "Tesselation": fmc.FMesh_Tesselation,
-    "WholeFace": fmc.FMesh_Whole_Face,
+    "WholeFace": fmc.FMesh_Whole_Face
 }

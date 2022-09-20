@@ -17,9 +17,9 @@ def setSeed(seed=1):
 
 
 def mode(obj, hp, model = False):
-    if model and hp.is_cuda:
+    if model and hp.use_cuda:
         obj = obj.cuda()
-    elif hp.is_cuda:
+    elif hp.use_cuda:
         obj = obj.cuda(non_blocking = hp.pin_mem)
     return obj
 

@@ -1,9 +1,9 @@
 import argparse
 import torch.nn as nn
-from Hyperparameter import HyperParameter
 # from Model import Models, LossFuncations
 # from Dataset import DatasetsLoad
-# from Combiner import Combiners
+from Combiner import Combiners
+from Combiner.HPSelector import HyperParameter, HPSelector
 from FaceLandmarks import fmc
 
 
@@ -40,7 +40,7 @@ class Arguments():
 
         args = parser.parse_args()
 
-        self.main_hp = HyperParameter.HyperParameters[args.hp]
+        self.main_hp = HPSelector[args.hp]
 
         if args.model == None:
             self.combiner = Combiners[self.main_hp.main_model]
