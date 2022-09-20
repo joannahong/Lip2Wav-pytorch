@@ -1,18 +1,16 @@
 # from inference import load_model, infer_vid
 import torch
-from shutil import copy
 from torchvision import transforms
 from PIL import Image
 from pathlib import Path
 from glob import glob
 import numpy as np
 from tqdm import tqdm
-import sys, cv2, os, pickle, argparse, subprocess
-
-from model.model import Tacotron2
-from hparams import hparams as hps
+import cv2, os, argparse, subprocess
+from Model.Lip2WavTacotron2 import Lip2WavTacotron2
+from Hyperparameter.Lip2WavHP import Lip2WavHP as hp
 import utils.audio as audio
-from utils.util import mode, to_var, to_arr
+from utils import mode
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -46,7 +44,7 @@ class Generator(object):
 				raise FileNotFoundError('Frames maybe missing in {}.' 
 						' Delete the video to stop this exception!'.format(sample['folder']))
 
-			img = cv2.resize(img, (hps.img_size, hps.img_size))
+			img = cv2.resize(img, (hp.img_size, hp.img_size))
 			window.append(img)
 
 		images = np.asarray(window) / 255. # T x H x W x 3
@@ -57,9 +55,9 @@ class Generator(object):
 		images = sample['images']
 		all_windows = []
 		i = 0
-		while i + hps.T <= len(images):
-			all_windows.append(images[i : i + hps.T])
-			i += hps.T - hps.overlap
+		while i + hp.T <= len(images):
+			all_windows.append(images[i : i + hp.T])
+			i += hp.T - hp.overlap
 		all_windows.append(images[i: len(images)])
 
 		for window_idx, window_fnames in enumerate(all_windows):
@@ -71,10 +69,10 @@ class Generator(object):
 			if window_idx == 0:
 				mel = s
 			else:
-				mel = np.concatenate((mel, s[:, hps.mel_overlap:]), axis=1)
-		wav = audio.inv_mel_spectrogram(mel, hps)
+				mel = np.concatenate((mel, s[:, hp.mel_overlap:]), axis=1)
+		wav = audio.inv_mel_spectrogram(mel, hp)
 
-		audio.save_wav(wav, outfile, sr=hps.sample_rate)
+		audio.save_wav(wav, outfile, sr=hp.sample_rate)
 
 
 def get_image_list(split, data_root):
@@ -91,7 +89,7 @@ def get_testlist(data_root):
 	test_images = get_image_list('test', data_root)
 	# print(data_root)
 	# print(test_images)
-	print('{} hours is available for testing'.format(len(test_images) / (hps.fps * 3600.)))
+	print('{} hours is available for testing'.format(len(test_images) / (hp.fps * 3600.)))
 	test_vids = {}
 	for x in test_images:
 		x = x[:x.rfind('/')]
@@ -100,12 +98,12 @@ def get_testlist(data_root):
 
 def to_sec(idx):
 	frame_id = idx + 1
-	sec = frame_id / float(hps.fps)
+	sec = frame_id / float(hp.fps)
 	return sec
 
 def contiguous_window_generator(vidpath):
 	frames = glob(os.path.join(vidpath, '*.jpg'))
-	if len(frames) < hps.T: return
+	if len(frames) < hp.T: return
 
 	ids = [int(os.path.splitext(os.path.basename(f))[0]) for f in frames]
 	sortedids = sorted(ids)
@@ -115,7 +113,7 @@ def contiguous_window_generator(vidpath):
 	while end_idx < len(sortedids):
 		while end_idx < len(sortedids):
 			if end_idx == len(sortedids) - 1:
-				if sortedids[end_idx] + 1 - start >= hps.T:
+				if sortedids[end_idx] + 1 - start >= hp.T:
 					yield ((to_sec(start), to_sec(sortedids[end_idx])), 
 					[os.path.join(vidpath, '{}.jpg'.format(x)) for x in range(start, sortedids[end_idx] + 1)])
 				return
@@ -123,7 +121,7 @@ def contiguous_window_generator(vidpath):
 				if sortedids[end_idx] + 1 == sortedids[end_idx + 1]:
 					end_idx += 1
 				else:
-					if sortedids[end_idx] + 1 - start >= hps.T:
+					if sortedids[end_idx] + 1 - start >= hp.T:
 						yield ((to_sec(start), to_sec(sortedids[end_idx])), 
 						[os.path.join(vidpath, '{}.jpg'.format(x)) for x in range(start, sortedids[end_idx] + 1)])
 					break
@@ -134,7 +132,7 @@ def contiguous_window_generator(vidpath):
 
 def load_model(ckpt_pth):
 	ckpt_dict = torch.load(ckpt_pth)
-	model = Tacotron2()
+	model = Lip2WavTacotron2()
 	model.load_state_dict(ckpt_dict['model'])
 	for name, param in model.named_parameters():
 		print(name)

@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import numpy as np
 import matplotlib.pylab as plt
 
@@ -13,8 +13,7 @@ def save_figure_to_numpy(fig):
 
 def plot_alignment_to_numpy(alignment, info=None):
     fig, ax = plt.subplots(figsize=(6, 4))
-    im = ax.imshow(alignment, aspect='auto', origin='lower',
-                   interpolation='none')
+    im = ax.imshow(alignment, aspect='auto', origin='lower', interpolation='none')
     fig.colorbar(im, ax=ax)
     xlabel = 'Decoder timestep'
     if info is not None:
@@ -31,8 +30,7 @@ def plot_alignment_to_numpy(alignment, info=None):
 
 def plot_spectrogram_to_numpy(spectrogram):
     fig, ax = plt.subplots(figsize=(12, 3))
-    im = ax.imshow(spectrogram, aspect="auto", origin="lower",
-                   interpolation='none')
+    im = ax.imshow(spectrogram, aspect="auto", origin="lower", interpolation='none')
     plt.colorbar(im, ax=ax)
     plt.xlabel("Frames")
     plt.ylabel("Channels")
@@ -42,3 +40,20 @@ def plot_spectrogram_to_numpy(spectrogram):
     data = save_figure_to_numpy(fig)
     plt.close()
     return data
+
+
+
+def save_spec_plot(spectrogram, fname=None):
+    image = plot_spectrogram_to_numpy(spectrogram).transpose(1, 2, 0)
+    if fname != None:
+        plt.imsave(fname, image)
+    return image
+
+
+def save_align_plot(alignment, fname=None):
+    image = plot_alignment_to_numpy(alignment).transpose(1, 2, 0)
+    if fname != None:
+        plt.imsave(fname, image)
+    return image
+
+

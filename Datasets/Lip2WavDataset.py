@@ -1,15 +1,18 @@
 import os
-import torch
+import cv2
 import random
 import numpy as np
-from torch.utils.data import Dataset
-from torchvision import transforms
 from PIL import Image
-
-import cv2
 from glob import glob
 from pathlib import Path
-from os.path import dirname, join, basename, isfile
+
+
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
+from Hyperparameter import HyperParameter
+
+
 random.seed(0)
 
 
@@ -31,42 +34,36 @@ def get_image_list(split, data_root):
 			filelist.extend(list(glob(os.path.join(data_root, 'preprocessed_new', vid_id, '*/*.jpg'))))
 	return filelist
 
-class VideoMelLoader(torch.utils.data.Dataset):
-	def __init__(self, fdir, hparams, split='train'):
-		self._hparams = hparams
-		# self.filelist = {'train': self._hparams.all_images, 'test': self._hparams.all_test_images}
-		# if split == 'train':
-		# 	self.filelist = self._hparams.all_images
-		# else:
-		# 	self.filelist = self._hparams.all_test_images
-		self.filelist = get_image_list(split, fdir)
-
+class Lip2WavDataset(Dataset):
+	def __init__(self, hp:HyperParameter, split='train'):
+		self.hp = hp
+		self.filelist = get_image_list(split, hp.datasets_dir)
 		self.test_steps = 2
 
 		# pad input sequences with the <pad_token> 0 ( _ )
-		self._pad = 0
+		# self._pad = 0
 		# explicitely setting the padding to a value that doesn"t originally exist in the spectogram
 		# to avoid any possible conflicts, without affecting the output range of the model too much
-		if hparams.symmetric_mels:
-			self._target_pad = -hparams.max_abs_value
-		else:
-			self._target_pad = 0.
+		# if hp.symmetric_mels:
+		# 	self._target_pad = -hp.max_abs_value
+		# else:
+		# 	self._target_pad = 0.
 		# Mark finished sequences with 1s
-		self._token_pad = 1.
+		# self._token_pad = 1.
 
 	def get_window(self, center_frame):
 		center_id = self.get_frame_id(center_frame)
-		vidname = dirname(center_frame)
-		if self._hparams.T % 2:
-			window_ids = range(center_id - self._hparams.T // 2, center_id + self._hparams.T // 2 + 1)
+		vidname = os.path.dirname(center_frame)
+		if self.hp.cropT % 2:
+			window_ids = range(center_id - self.hp.cropT // 2, center_id + self.hp.cropT // 2 + 1)
 		else:
-			window_ids = range(center_id - self._hparams.T // 2, center_id + self._hparams.T // 2)
+			window_ids = range(center_id - self.hp.cropT // 2, center_id + self.hp.cropT // 2)
 
 		window_fnames = list()
 		for frame_id in window_ids:
-			frame = join(vidname, '{}.jpg'.format(frame_id))
+			frame = os.path.join(vidname, '{}.jpg'.format(frame_id))
 
-			if not isfile(frame):
+			if not os.path.isfile(frame):
 				return None
 			window_fnames.append(frame)
 		return window_fnames
@@ -74,15 +71,15 @@ class VideoMelLoader(torch.utils.data.Dataset):
 	def crop_audio_window(self, spec, center_frame):
 		# estimate total number of frames from spec (num_features, T)
 		# num_frames = (T x hop_size * fps) / sample_rate
-		start_frame_id = self.get_frame_id(center_frame) - self._hparams.T // 2
-		total_num_frames = int((spec.shape[0] * self._hparams.hop_size * self._hparams.fps) / self._hparams.sample_rate)
+		start_frame_id = self.get_frame_id(center_frame) - self.hp.cropT // 2
+		total_num_frames = int((spec.shape[0] * self.hp.hop_size * self.hp.fps) / self.hp.sample_rate)
 
 		start_idx = int(spec.shape[0] * start_frame_id / float(total_num_frames))
-		end_idx = start_idx + self._hparams.mel_step_size
+		end_idx = start_idx + self.hp.mel_step_size
 		return spec[start_idx: end_idx, :]
 
 	def get_frame_id(self, frame):
-		return int(basename(frame).split('.')[0])
+		return int(os.path.basename(frame).split('.')[0])
 
 	def __getitem__(self, index):
 		img_name = self.filelist[index]
@@ -108,7 +105,7 @@ class VideoMelLoader(torch.utils.data.Dataset):
 					# Convert RGB to BGR
 					img = img[:, :, ::-1].copy()
 				try:
-					img = cv2.resize(img, (self._hparams.img_size, self._hparams.img_size))
+					img = cv2.resize(img, (self.hp.img_size, self.hp.img_size))
 				except:
 					continue
 
@@ -116,28 +113,25 @@ class VideoMelLoader(torch.utils.data.Dataset):
 			x = np.asarray(window) / 255.
 		else:
 			x = None
-		embed_target = np.zeros([256], dtype=np.float32)
-		return x, mel.T, embed_target, len(mel)
+		return x, mel.T, len(mel)
 
 	def __len__(self):
 		return len(self.filelist)
 
-class VMcollate():
-	def __init__(self, hparams, n_frames_per_step):
-		self.n_frames_per_step = n_frames_per_step
-		self._hparams = hparams
+class Lip2WavCollate():
+	def __init__(self, hp, n_frames_per_step):
+		self.hp = hp
 
 	def __call__(self, batch):
 		# Right zero-pad all one-hot text sequences to max input length
-		vid_refined, mel_refined, target_lengths, embed_refined = [], [], [], []
+		vid_refined, mel_refined, target_lengths = [], [], []
 
-		for i, (vid, aud, emb_tar, aud_len) in enumerate(batch):
+		for i, (vid, aud, aud_len) in enumerate(batch):
 			if not vid is None:
 				vid = torch.Tensor(vid)
 				aud = torch.Tensor(aud)
 				vid_refined.append(vid)
 				mel_refined.append(aud)
-				embed_refined.append(emb_tar)
 				target_lengths.append(aud_len)
 
 		input_lengths, ids_sorted_decreasing = torch.sort(
@@ -147,7 +141,7 @@ class VMcollate():
 		bsz = len(input_lengths)
 		max_input_len = input_lengths[0]
 		# vid_padded = torch.LongTensor(len(batch), max_input_len) #todo
-		vid_padded = torch.Tensor(bsz, 3, max_input_len, self._hparams.img_size, self._hparams.img_size) #todo
+		vid_padded = torch.Tensor(bsz, 3, max_input_len, self.hp.img_size, self.hp.img_size) #todo
 		vid_padded.zero_()
 
 		for i in range(len(ids_sorted_decreasing)):
@@ -157,12 +151,12 @@ class VMcollate():
 
 		# Right zero-pad mel-spec
 		# num_mels = vid_refined[1].size(0) #todo check
-		num_mels = self._hparams.num_mels
+		num_mels = self.hp.num_mels
 		max_target_len = max([m.size(1) for m in mel_refined])
 
-		if max_target_len % self.n_frames_per_step != 0:
-			max_target_len += self.n_frames_per_step - max_target_len % self.n_frames_per_step
-			assert max_target_len % self.n_frames_per_step == 0
+		if max_target_len % self.hp.n_frames_per_step != 0:
+			max_target_len += self.hp.n_frames_per_step - max_target_len % self.hp.n_frames_per_step
+			assert max_target_len % self.hp.n_frames_per_step == 0
 
 		# include mel padded and gate padded
 		mel_padded = torch.FloatTensor(bsz, num_mels, max_target_len)
@@ -176,7 +170,7 @@ class VMcollate():
 			gate_padded[i, mel.size(1)-1:] = 1
 			target_lengths[i] = mel.size(1)
 
-		embed_targets = torch.LongTensor(embed_refined)
 		split_infos = torch.LongTensor([max_input_len, max_target_len])
 
-		return vid_padded, input_lengths, mel_padded, gate_padded, target_lengths, split_infos, embed_targets
+		return vid_padded, input_lengths, mel_padded, gate_padded, target_lengths, split_infos
+

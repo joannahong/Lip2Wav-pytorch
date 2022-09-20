@@ -2,9 +2,9 @@ import torch
 from torch import nn
 
 
-class Tacotron2Loss(nn.Module):
+class Lip2WavLoss(nn.Module):
     def __init__(self, hp):
-        super(Tacotron2Loss, self).__init__()
+        super(Lip2WavLoss, self).__init__()
         self.hp = hp
 
     def forward(self, model_output, targets, iteration):

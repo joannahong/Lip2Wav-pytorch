@@ -23,21 +23,9 @@ class Lip2WavTacotron2(nn.Module):
         self.decoder = Lip2WavDecoder(hp).cuda()
         self.postnet = Lip2WavPostnet(hp).cuda()
 
+
     def parse_batch(self, batch):
-        text_padded, input_lengths, mel_padded, gate_padded, output_lengths = batch
-        text_padded = to_var(text_padded, self.hp).long()
-        input_lengths = to_var(input_lengths, self.hp).long()
-        max_len = torch.max(input_lengths.data).item()
-        mel_padded = to_var(mel_padded, self.hp).float()
-        gate_padded = to_var(gate_padded, self.hp).float()
-        output_lengths = to_var(output_lengths, self.hp).long()
-
-        return (
-            (text_padded, input_lengths, mel_padded, max_len, output_lengths),
-            (mel_padded, gate_padded))
-
-    def parse_batch_vid(self, batch):
-        vid_padded, input_lengths, mel_padded, gate_padded, target_lengths, split_infos, embed_targets = batch
+        vid_padded, input_lengths, mel_padded, gate_padded, target_lengths, split_infos = batch
         vid_padded = to_var(vid_padded, self.hp).float()
         input_lengths = to_var(input_lengths, self.hp).float()
         mel_padded = to_var(mel_padded, self.hp).float()
@@ -45,8 +33,6 @@ class Lip2WavTacotron2(nn.Module):
         target_lengths = to_var(target_lengths, self.hp).float()
 
         max_len_vid = split_infos[0].data.item()
-        max_len_target = split_infos[1].data.item()
-
         mel_padded = to_var(mel_padded, self.hp).float()
 
         return (
@@ -109,20 +95,20 @@ class Lip2WavTacotron2(nn.Module):
 
         return outputs
 
-    def teacher_infer(self, inputs, mels):
-        il, _ = torch.sort(torch.LongTensor([len(x) for x in inputs]),
-                           dim=0, descending=True)
-        vid_lengths = to_var(il, self.hp)
-
-        embedded_inputs = self.embedding(inputs).transpose(1, 2)
-
-        encoder_outputs = self.encoder(embedded_inputs, vid_lengths)
-
-        mel_outputs, gate_outputs, alignments = self.decoder(
-            encoder_outputs, mels, memory_lengths=vid_lengths)
-
-        mel_outputs_postnet = self.postnet(mel_outputs)
-        mel_outputs_postnet = mel_outputs + mel_outputs_postnet
-
-        return self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
+    # def teacher_infer(self, inputs, mels):
+    #     il, _ = torch.sort(torch.LongTensor([len(x) for x in inputs]),
+    #                        dim=0, descending=True)
+    #     vid_lengths = to_var(il, self.hp)
+    #
+    #     embedded_inputs = self.embedding(inputs).transpose(1, 2)
+    #
+    #     encoder_outputs = self.encoder(embedded_inputs, vid_lengths)
+    #
+    #     mel_outputs, gate_outputs, alignments = self.decoder(
+    #         encoder_outputs, mels, memory_lengths=vid_lengths)
+    #
+    #     mel_outputs_postnet = self.postnet(mel_outputs)
+    #     mel_outputs_postnet = mel_outputs + mel_outputs_postnet
+    #
+    #     return self.parse_output(
+    #         [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
